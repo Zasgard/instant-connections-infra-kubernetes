@@ -1,0 +1,65 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-backend
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: {{ .Values.backend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "instant-connections.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "instant-connections.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: {{ include "instant-connections.fullname" . }}-app-config
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+          env:
+            - name: REACT_APP_API_URL
+              value: {{ .Values.frontend.env.REACT_APP_API_URL | quote }}
+            - name: REACT_APP_JITSI_DOMAIN
+              value: {{ .Values.frontend.env.REACT_APP_JITSI_DOMAIN | quote }}
+            {{- if .Values.backend.uploads.objectStorage.enabled }}
+            - name: OBJECT_STORAGE_ENDPOINT
+              value: {{ .Values.backend.uploads.objectStorage.endpoint | quote }}
+            - name: OBJECT_STORAGE_BUCKET
+              value: {{ .Values.backend.uploads.objectStorage.bucket | quote }}
+            - name: OBJECT_STORAGE_REGION
+              value: {{ .Values.backend.uploads.objectStorage.region | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.path }}
+              port: http
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.path }}
+              port: http
+          {{- if and (eq .Values.backend.uploads.strategy "pvc") .Values.backend.uploads.pvc.enabled }}
+          volumeMounts:
+            - name: uploads
+              mountPath: /home/app/uploads
+          {{- end }}
+      {{- if and (eq .Values.backend.uploads.strategy "pvc") .Values.backend.uploads.pvc.enabled }}
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "instant-connections.fullname" . }}-uploads
+      {{- end }}
+{{- end }}

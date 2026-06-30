@@ -1,0 +1,43 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-jvb
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-jvb
+spec:
+  replicas: {{ .Values.jitsi.jvb.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "instant-connections.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: jitsi-jvb
+  template:
+    metadata:
+      labels:
+        {{- include "instant-connections.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: jitsi-jvb
+    spec:
+      containers:
+        - name: jvb
+          image: "{{ .Values.jitsi.jvb.image.repository }}:{{ .Values.jitsi.jvb.image.tag }}"
+          imagePullPolicy: {{ .Values.jitsi.jvb.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.jitsi.jvb.port }}
+              name: media
+              protocol: UDP
+          env:
+            - name: XMPP_SERVER
+              value: {{ include "instant-connections.fullname" . }}-jitsi-prosody
+            - name: XMPP_DOMAIN
+              value: {{ .Values.jitsi.domain | quote }}
+            - name: JVB_PORT
+              value: {{ .Values.jitsi.jvb.port | toString | quote }}
+            - name: JVB_ADVERTISE_IPS
+              value: {{ join "," .Values.jitsi.jvb.advertiseIps | quote }}
+            - name: PUBLIC_URL
+              value: {{ .Values.jitsi.publicUrl | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+{{- end }}

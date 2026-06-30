@@ -1,0 +1,35 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-jicofo
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-jicofo
+spec:
+  replicas: {{ .Values.jitsi.jicofo.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "instant-connections.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: jitsi-jicofo
+  template:
+    metadata:
+      labels:
+        {{- include "instant-connections.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: jitsi-jicofo
+    spec:
+      containers:
+        - name: jicofo
+          image: "{{ .Values.jitsi.jicofo.image.repository }}:{{ .Values.jitsi.jicofo.image.tag }}"
+          imagePullPolicy: {{ .Values.jitsi.jicofo.image.pullPolicy }}
+          env:
+            - name: XMPP_SERVER
+              value: {{ include "instant-connections.fullname" . }}-jitsi-prosody
+            - name: XMPP_DOMAIN
+              value: {{ .Values.jitsi.domain | quote }}
+            - name: JICOFO_AUTH_USER
+              value: focus
+          envFrom:
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+{{- end }}

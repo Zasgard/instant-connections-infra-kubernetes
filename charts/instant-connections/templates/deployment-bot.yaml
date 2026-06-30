@@ -1,0 +1,32 @@
+{{- if .Values.bot.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-bot
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bot
+spec:
+  replicas: {{ .Values.bot.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "instant-connections.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: bot
+  template:
+    metadata:
+      labels:
+        {{- include "instant-connections.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: bot
+    spec:
+      containers:
+        - name: bot
+          image: "{{ .Values.bot.image.repository }}:{{ .Values.bot.image.tag }}"
+          imagePullPolicy: {{ .Values.bot.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.bot.command | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "instant-connections.fullname" . }}-app-config
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+{{- end }}

@@ -1,0 +1,77 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "instant-connections.fullname" . }}
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.certManager.enabled }}
+    cert-manager.io/cluster-issuer: {{ .Values.certManager.clusterIssuerName }}
+    {{- end }}
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/upgrade: "$http_upgrade"
+    nginx.ingress.kubernetes.io/connection-proxy-header: "upgrade"
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.appHost }}
+      secretName: {{ .Values.ingress.tls.appSecretName }}
+    - hosts:
+        - {{ .Values.ingress.meetHost }}
+      secretName: {{ .Values.ingress.tls.meetSecretName }}
+  rules:
+    - host: {{ .Values.ingress.appHost }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "instant-connections.fullname" . }}-backend
+                port:
+                  number: {{ .Values.backend.service.port }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "instant-connections.fullname" . }}-frontend
+                port:
+                  number: {{ .Values.frontend.service.port }}
+    - host: {{ .Values.ingress.meetHost }}
+      http:
+        paths:
+          - path: /xmpp-websocket
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "instant-connections.fullname" . }}-jitsi-web
+                port:
+                  number: 80
+          - path: /http-bind
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "instant-connections.fullname" . }}-jitsi-web
+                port:
+                  number: 80
+          - path: /colibri-ws
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "instant-connections.fullname" . }}-jitsi-web
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "instant-connections.fullname" . }}-jitsi-web
+                port:
+                  number: 80
+{{- end }}

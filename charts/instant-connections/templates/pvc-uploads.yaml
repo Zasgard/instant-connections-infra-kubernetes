@@ -1,0 +1,17 @@
+{{- if and .Values.backend.enabled (eq .Values.backend.uploads.strategy "pvc") .Values.backend.uploads.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-uploads
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.backend.uploads.pvc.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.uploads.pvc.size }}
+  {{- if .Values.backend.uploads.pvc.storageClass }}
+  storageClassName: {{ .Values.backend.uploads.pvc.storageClass }}
+  {{- end }}
+{{- end }}

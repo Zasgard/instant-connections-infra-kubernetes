@@ -1,0 +1,24 @@
+{{- if and .Values.backend.enabled .Values.createSuperuser.job.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-create-superuser
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-superuser
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.createSuperuser.job.command | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "instant-connections.fullname" . }}-app-config
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+{{- end }}
