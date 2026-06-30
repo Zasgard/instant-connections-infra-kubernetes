@@ -18,7 +18,7 @@ Umbrella Helm chart + CI workflow to deploy Instant Connections on Linode Kubern
 
 ## Chart location
 
-`/home/runner/work/instant-connections-infra-kubernetes/instant-connections-infra-kubernetes/charts/instant-connections`
+`./charts/instant-connections`
 
 ## Ingress and TLS
 

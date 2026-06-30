@@ -31,10 +31,6 @@ spec:
             - secretRef:
                 name: {{ include "instant-connections.fullname" . }}-app-secrets
           env:
-            - name: REACT_APP_API_URL
-              value: {{ .Values.frontend.env.REACT_APP_API_URL | quote }}
-            - name: REACT_APP_JITSI_DOMAIN
-              value: {{ .Values.frontend.env.REACT_APP_JITSI_DOMAIN | quote }}
             {{- if .Values.backend.uploads.objectStorage.enabled }}
             - name: OBJECT_STORAGE_ENDPOINT
               value: {{ .Values.backend.uploads.objectStorage.endpoint | quote }}
