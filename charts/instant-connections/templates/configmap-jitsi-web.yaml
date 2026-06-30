@@ -1,0 +1,13 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-web-config
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+data:
+  custom-config.js: |
+{{ .Values.jitsiWebConfig.customConfigJs | indent 4 }}
+  custom-interface_config.js: |
+{{ .Values.jitsiWebConfig.customInterfaceConfigJs | indent 4 }}
+{{- end }}

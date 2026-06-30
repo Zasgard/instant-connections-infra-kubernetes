@@ -1,0 +1,58 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-web
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-web
+spec:
+  replicas: {{ .Values.jitsi.web.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "instant-connections.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: jitsi-web
+  template:
+    metadata:
+      labels:
+        {{- include "instant-connections.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: jitsi-web
+    spec:
+      containers:
+        - name: jitsi-web
+          image: "{{ .Values.jitsi.web.image.repository }}:{{ .Values.jitsi.web.image.tag }}"
+          imagePullPolicy: {{ .Values.jitsi.web.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: DISABLE_HTTPS
+              value: "1"
+            - name: ENABLE_LETSENCRYPT
+              value: "0"
+            - name: PUBLIC_URL
+              value: {{ .Values.jitsi.publicUrl | quote }}
+            - name: XMPP_DOMAIN
+              value: {{ .Values.jitsi.domain | quote }}
+            - name: XMPP_BOSH_URL_BASE
+              value: http://{{ include "instant-connections.fullname" . }}-jitsi-prosody:5280
+          volumeMounts:
+            - name: jitsi-web-config
+              mountPath: /config/custom-config.js
+              subPath: custom-config.js
+            - name: jitsi-web-config
+              mountPath: /config/custom-interface_config.js
+              subPath: custom-interface_config.js
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+      volumes:
+        - name: jitsi-web-config
+          configMap:
+            name: {{ include "instant-connections.fullname" . }}-jitsi-web-config
+{{- end }}

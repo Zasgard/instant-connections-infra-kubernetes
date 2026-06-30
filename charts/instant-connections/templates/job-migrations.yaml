@@ -1,0 +1,24 @@
+{{- if and .Values.backend.enabled .Values.migrations.job.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-migrations
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrations
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.migrations.job.command | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "instant-connections.fullname" . }}-app-config
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+{{- end }}

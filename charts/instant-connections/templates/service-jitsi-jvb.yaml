@@ -1,0 +1,24 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-jvb
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-jvb
+  {{- with .Values.jitsi.jvb.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.jitsi.jvb.service.type }}
+  externalTrafficPolicy: Local
+  ports:
+    - name: media
+      port: {{ .Values.jitsi.jvb.port }}
+      targetPort: media
+      protocol: UDP
+  selector:
+    {{- include "instant-connections.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-jvb
+{{- end }}

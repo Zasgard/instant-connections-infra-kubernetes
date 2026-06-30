@@ -1,0 +1,179 @@
+global:
+  namespace: instant-connections
+  appName: Instant Connections
+  appDescription: Instant Connections production deployment
+
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: ghcr.io/zasgard/instant-connections-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  env:
+    REACT_APP_API_URL: /api
+    REACT_APP_JITSI_DOMAIN: meet.example.com
+
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: ghcr.io/zasgard/instant-connections-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  probes:
+    path: /api/v1/health
+  env:
+    ENVIRONMENT: production
+    JITSI_DOMAIN: meet.example.com
+  uploads:
+    strategy: pvc
+    pvc:
+      enabled: true
+      storageClass: ""
+      size: 20Gi
+      accessModes:
+        - ReadWriteOnce
+    objectStorage:
+      enabled: false
+      endpoint: ""
+      bucket: ""
+      region: ""
+
+worker:
+  enabled: true
+  replicaCount: 1
+  command:
+    - arq
+    - app.core.worker.settings.WorkerSettings
+
+bot:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: ghcr.io/zasgard/instant-connections-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  command:
+    - python
+    - -m
+    - app.bot.main
+
+jitsi:
+  enabled: true
+  publicUrl: https://meet.example.com
+  domain: meet.example.com
+  web:
+    replicaCount: 1
+    image:
+      repository: jitsi/web
+      tag: stable-9823
+      pullPolicy: IfNotPresent
+  prosody:
+    replicaCount: 1
+    image:
+      repository: jitsi/prosody
+      tag: stable-9823
+      pullPolicy: IfNotPresent
+  jicofo:
+    replicaCount: 1
+    image:
+      repository: jitsi/jicofo
+      tag: stable-9823
+      pullPolicy: IfNotPresent
+  jvb:
+    replicaCount: 1
+    image:
+      repository: jitsi/jvb
+      tag: stable-9823
+      pullPolicy: IfNotPresent
+    port: 10000
+    advertiseIps: []
+    service:
+      type: LoadBalancer
+      annotations: {}
+
+createSuperuser:
+  job:
+    enabled: false
+    command:
+      - python
+      - -m
+      - app.scripts.create_superuser
+
+migrations:
+  job:
+    enabled: false
+    command:
+      - alembic
+      - upgrade
+      - head
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+  appHost: app.example.com
+  meetHost: meet.example.com
+  tls:
+    appSecretName: app-example-com-tls
+    meetSecretName: meet-example-com-tls
+
+certManager:
+  enabled: true
+  clusterIssuerName: letsencrypt-prod
+  email: admin@example.com
+  server: https://acme-v02.api.letsencrypt.org/directory
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    password: ""
+
+postgres:
+  enabled: false
+  auth:
+    username: instant_connections
+    password: ""
+    database: instant_connections
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+externalRedis:
+  host: ""
+  port: 6379
+  password: ""
+
+externalDatabase:
+  host: ""
+  port: 5432
+  database: instant_connections
+  username: instant_connections
+  password: ""
+
+secrets:
+  secretKey: ""
+  botInternalSecret: ""
+  jicofoAuthPassword: ""
+  jvbAuthPassword: ""
+  objectStorageAccessKey: ""
+  objectStorageSecretKey: ""
+
+jitsiWebConfig:
+  customConfigJs: |
+    // Override with your Jitsi custom config
+  customInterfaceConfigJs: |
+    // Override with your Jitsi custom interface config

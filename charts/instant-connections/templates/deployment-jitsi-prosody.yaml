@@ -1,0 +1,48 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-prosody
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-prosody
+spec:
+  replicas: {{ .Values.jitsi.prosody.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "instant-connections.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: jitsi-prosody
+  template:
+    metadata:
+      labels:
+        {{- include "instant-connections.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: jitsi-prosody
+    spec:
+      containers:
+        - name: prosody
+          image: "{{ .Values.jitsi.prosody.image.repository }}:{{ .Values.jitsi.prosody.image.tag }}"
+          imagePullPolicy: {{ .Values.jitsi.prosody.image.pullPolicy }}
+          ports:
+            - containerPort: 5222
+              name: c2s
+            - containerPort: 5280
+              name: bosh
+            - containerPort: 5347
+              name: component
+          env:
+            - name: AUTH_TYPE
+              value: internal
+            - name: XMPP_DOMAIN
+              value: {{ .Values.jitsi.domain | quote }}
+            - name: XMPP_AUTH_DOMAIN
+              value: auth.{{ .Values.jitsi.domain }}
+            - name: XMPP_MUC_DOMAIN
+              value: muc.{{ .Values.jitsi.domain }}
+            - name: XMPP_INTERNAL_MUC_DOMAIN
+              value: internal-muc.{{ .Values.jitsi.domain }}
+            - name: XMPP_GUEST_DOMAIN
+              value: guest.{{ .Values.jitsi.domain }}
+          envFrom:
+            - secretRef:
+                name: {{ include "instant-connections.fullname" . }}-app-secrets
+{{- end }}

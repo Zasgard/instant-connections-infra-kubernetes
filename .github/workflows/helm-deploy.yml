@@ -1,0 +1,79 @@
+name: Helm Deploy
+
+on:
+  pull_request:
+    paths:
+      - 'charts/**'
+      - '.github/workflows/helm-deploy.yml'
+      - 'README.md'
+  push:
+    branches:
+      - main
+    paths:
+      - 'charts/**'
+      - '.github/workflows/helm-deploy.yml'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helm-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Build chart dependencies
+        run: helm dependency build ./charts/instant-connections
+
+      - name: Helm lint
+        run: helm lint ./charts/instant-connections
+
+      - name: Helm template
+        run: helm template instant-connections ./charts/instant-connections > /tmp/rendered.yaml
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: lint-and-template
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        env:
+          KUBECONFIG_B64: ${{ secrets.KUBECONFIG_B64 }}
+        run: |
+          test -n "$KUBECONFIG_B64"
+          mkdir -p "$HOME/.kube"
+          echo "$KUBECONFIG_B64" | base64 -d > "$HOME/.kube/config"
+
+      - name: Build chart dependencies
+        run: helm dependency build ./charts/instant-connections
+
+      - name: Deploy chart
+        env:
+          NAMESPACE: ${{ vars.K8S_NAMESPACE || 'instant-connections' }}
+        run: |
+          kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+          helm upgrade --install instant-connections ./charts/instant-connections \
+            --namespace "$NAMESPACE" \
+            --create-namespace \
+            --wait \
+            --timeout 10m

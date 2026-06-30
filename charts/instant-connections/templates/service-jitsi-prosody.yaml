@@ -1,0 +1,27 @@
+{{- if .Values.jitsi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "instant-connections.fullname" . }}-jitsi-prosody
+  labels:
+    {{- include "instant-connections.labels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-prosody
+spec:
+  type: ClusterIP
+  ports:
+    - name: c2s
+      port: 5222
+      targetPort: c2s
+      protocol: TCP
+    - name: bosh
+      port: 5280
+      targetPort: bosh
+      protocol: TCP
+    - name: component
+      port: 5347
+      targetPort: component
+      protocol: TCP
+  selector:
+    {{- include "instant-connections.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: jitsi-prosody
+{{- end }}
